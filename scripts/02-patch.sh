@@ -34,12 +34,12 @@ echo "✓ KernelSU-Next added to kernel tree"
 echo ""
 echo "→ [2/5] Applying KSU manual hook patches..."
 
-NONGKI_RAW="https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/raw/refs/heads/mainline/Patches/Patch/susfs_patch_to_${KERNEL_VERSION}.patch"
+NONGKI_RAW="https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/raw/refs/heads/mainline/Patches/syscall_hook_patches.sh"
 
 curl -LSs "${NONGKI_RAW}/Patches/patch-ksu-hooks-4.14.sh" -o /tmp/ksu-hooks.sh 2>/dev/null || \
 curl -LSs "${NONGKI_RAW}/Bin/patch-ksu-hooks.sh" -o /tmp/ksu-hooks.sh 2>/dev/null || {
     echo "⚠ Hook script URL may have changed."
-    echo "  https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/raw/refs/heads/mainline/Patches/Patch/susfs_patch_to_${KERNEL_VERSION}.patch"
+    echo "  https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/raw/refs/heads/mainline/Patches/syscall_hook_patches.sh"
     echo "  Download the 4.14 hook script manually and place it at: /tmp/ksu-hooks.sh"
     exit 1
 }
