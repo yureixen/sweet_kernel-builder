@@ -52,7 +52,7 @@ echo "✓ KSU manual hooks applied"
 echo ""
 echo "→ [3/5] Applying SuSFS kernel patches (4.14)..."
 
-SUSFS_RAW="https://gitlab.com/simonpunk/susfs4ksu/-/tree/kernel-4.14/kernel_patches"
+SUSFS_RAW="https://gitlab.com/simonpunk/susfs4ksu/-/raw/kernel-4.14/kernel_patches"
 
 # Patch 1: Enable SuSFS in KSU
 curl -LSs "${SUSFS_RAW}/10_enable_susfs_for_ksu.patch" -o /tmp/susfs-ksu.patch
@@ -74,7 +74,7 @@ echo "→ [4/5] Applying SuSFS inline hook patches..."
 
 curl -LSs "${NONGKI_RAW}/Patches/susfs_inline_hook_patches.sh" -o /tmp/susfs-inline.sh 2>/dev/null || {
     echo "⚠ Inline hook script URL may have changed."
-    echo "  Check: https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/raw/refs/heads/mainline/Patches/Patch/susfs_patch_to_${KERNEL_VERSION}.patch"
+    echo "  Check: https://github.com/JackA1ltman/NonGKI_Kernel_Build_2nd/raw/refs/heads/mainline/Patches/susfs_inline_hook_patches.sh"
     exit 1
 }
 
