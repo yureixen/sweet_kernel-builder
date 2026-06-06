@@ -1,0 +1,70 @@
+# ════════════════════════════════════════════════════════════════
+#  sweet_kernel-builder — GitHub Actions Workflow
+#  Builds kernel for Redmi Note 10 Pro (sweet) with:
+#    · KernelSU-Next (legacy-susfs branch)
+#    · SuSFS (kernel-4.14 patch)
+#    · Neutron Clang toolchain
+# ════════════════════════════════════════════════════════════════
+
+name: Build Sweet Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'GitHub Release-e upload korbe? (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  build:
+    name: Build Kernel
+    runs-on: ubuntu-22.04
+
+    steps:
+      # ── 1. Checkout builder repo ─────────────────────────────
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ── 2. Load config.env into environment ──────────────────
+      - name: Load Configuration
+        run: |
+          echo "→ Loading config.env..."
+          grep -v '^\s*#' config.env | grep -v '^\s*$' >> $GITHUB_ENV
+          echo "KERNEL_DIR=$HOME/kernel-build/kernel" >> $GITHUB_ENV
+          echo "AK3_DIR=$HOME/kernel-build/AnyKernel3" >> $GITHUB_ENV
+          echo "CLANG_BIN=$HOME/toolchains/neutron-clang/bin" >> $GITHUB_ENV
+          echo "BUILD_DATE=$(date +'%Y%m%d-%H%M')" >> $GITHUB_ENV
+
+      # ── 3. Setup: deps + toolchain + kernel clone ─────────────
+      - name: Setup Environment
+        run: bash scripts/01-setup.sh
+
+      # ── 4. Apply patches: KSU-Next + SuSFS + manual hook ─────
+      - name: Apply Patches
+        run: bash scripts/02-patch.sh
+
+      # ── 5. Compile kernel + package AnyKernel3 zip ───────────
+      - name: Build Kernel
+        run: bash scripts/03-build.sh
+
+      # ── 6. Upload AnyKernel3 zip as artifact ─────────────────
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweet-kernel-${{ env.BUILD_DATE }}
+          path: ${{ env.AK3_DIR }}/sweet-kernel-*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+      # ── 7. (Optional) GitHub Release ─────────────────────────
+      - name: Create Release
+        if: ${{ github.event.inputs.release == 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: kernel-${{ env.BUILD_DATE }}
+          name: Sweet Kernel ${{ env.BUILD_DATE }}
+          files: ${{ env.AK3_DIR }}/sweet-kernel-*.zip
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
