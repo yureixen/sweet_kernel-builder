@@ -9,6 +9,8 @@
 name: Build Sweet Kernel
 
 on:
+  push: 
+    branches: master
   workflow_dispatch:
     inputs:
       release:
@@ -19,7 +21,7 @@ on:
 jobs:
   build:
     name: Build Kernel
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       # ── 1. Checkout builder repo ─────────────────────────────
