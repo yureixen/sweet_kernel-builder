@@ -9,8 +9,6 @@
 name: Build Sweet Kernel
 
 on:
-  push: 
-    branches: master
   workflow_dispatch:
     inputs:
       release:
