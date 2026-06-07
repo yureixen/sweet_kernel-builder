@@ -1,9 +1,6 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════
 #  03-build.sh — Kernel Compilation + AnyKernel3 Packaging
-#
-#  · Neutron Clang diye compile
-#  · Output: AnyKernel3 zip
 # ════════════════════════════════════════════════════════════════
 set -e
 
@@ -14,7 +11,6 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 cd "$KERNEL_DIR"
 
-# ─── Toolchain PATH ──────────────────────────────────────────────
 export PATH="$CLANG_BIN:$PATH"
 
 JOBS=$(nproc --all)
@@ -26,7 +22,7 @@ echo "  Defconfig  : $KERNEL_DEFCONFIG"
 echo "  Clang      : $(clang --version | head -1)"
 echo "  Jobs       : $JOBS"
 
-# ─── Common make args ────────────────────────────────────────────
+# ─── Make args ───────────────────────────────────────────────────
 MAKE_ARGS=(
     -j"$JOBS"
     O="$OUT"
@@ -36,7 +32,6 @@ MAKE_ARGS=(
     CLANG_TRIPLE=aarch64-linux-gnu-
     CROSS_COMPILE=aarch64-linux-gnu-
     CROSS_COMPILE_ARM32=arm-linux-gnueabi-
-    LD=ld.lld
     AR=llvm-ar
     NM=llvm-nm
     OBJCOPY=llvm-objcopy
@@ -44,7 +39,6 @@ MAKE_ARGS=(
     STRIP=llvm-strip
     HOSTCC=clang
     HOSTCXX=clang++
-    HOSTLD=ld.lld
 )
 
 # ─── Step 1: Make defconfig ──────────────────────────────────────
@@ -59,17 +53,15 @@ echo "→ [2/3] Compiling kernel..."
 echo "  (This will take a while...)"
 
 START_TIME=$(date +%s)
-
 make "${MAKE_ARGS[@]}" Image.gz-dtb dtbo.img 2>&1 | tee /tmp/build.log
-
 END_TIME=$(date +%s)
+
 ELAPSED=$(( END_TIME - START_TIME ))
 MINUTES=$(( ELAPSED / 60 ))
 SECONDS=$(( ELAPSED % 60 ))
-
 echo "✓ Compilation done in ${MINUTES}m ${SECONDS}s"
 
-# ─── Verify output files ─────────────────────────────────────────
+# ─── Verify output ───────────────────────────────────────────────
 IMAGE_GZ_DTB="$OUT/arch/arm64/boot/Image.gz-dtb"
 DTBO="$OUT/arch/arm64/boot/dtbo.img"
 
@@ -81,29 +73,18 @@ if [ ! -f "$IMAGE_GZ_DTB" ]; then
 fi
 
 echo "  Image.gz-dtb : $(du -h "$IMAGE_GZ_DTB" | cut -f1)"
-if [ -f "$DTBO" ]; then
-    echo "  dtbo.img     : $(du -h "$DTBO" | cut -f1)"
-fi
+[ -f "$DTBO" ] && echo "  dtbo.img     : $(du -h "$DTBO" | cut -f1)"
 
 # ─── Step 3: Package AnyKernel3 ──────────────────────────────────
 echo ""
 echo "→ [3/3] Packaging AnyKernel3 zip..."
 
-# AnyKernel3 directory clean up (purana kernel files hata)
 cd "$AK3_DIR"
 rm -f Image.gz-dtb Image.gz dtb dtbo.img *.zip
 
-# Copy kernel image
 cp "$IMAGE_GZ_DTB" "$AK3_DIR/Image.gz-dtb"
-echo "  ✓ Image.gz-dtb copied"
+[ -f "$DTBO" ] && cp "$DTBO" "$AK3_DIR/dtbo.img"
 
-# Copy dtbo if exists
-if [ -f "$DTBO" ]; then
-    cp "$DTBO" "$AK3_DIR/dtbo.img"
-    echo "  ✓ dtbo.img copied"
-fi
-
-# Create zip
 BUILD_DATE=$(date +'%Y%m%d-%H%M')
 ZIP_NAME="sweet-kernel-KSU-SuSFS-${BUILD_DATE}.zip"
 
@@ -112,8 +93,7 @@ zip -r9 "$ZIP_NAME" . \
     -x "*.zip" \
     -x "README.md"
 
-echo "✓ AnyKernel3 zip created: $ZIP_NAME"
-echo "  Size: $(du -h "$ZIP_NAME" | cut -f1)"
+echo "✓ AnyKernel3 zip: $ZIP_NAME ($(du -h "$ZIP_NAME" | cut -f1))"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
