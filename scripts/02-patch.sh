@@ -157,12 +157,10 @@ echo ""
 echo "→ [7/7] Adding sweet device defconfig entries..."
 
 {
-    # LN8K charging IC
     echo "CONFIG_CHARGER_LN8000=y"
-    # LTO
     echo "CONFIG_LTO_CLANG=y"
     echo "CONFIG_THINLTO=y"
-    # Extras
+    echo "# CONFIG_LTO_NONE is not set"
     echo "CONFIG_EROFS_FS=y"
     echo "CONFIG_SECURITY_SELINUX_DEVELOP=y"
 } >> "$DEFCONFIG"
