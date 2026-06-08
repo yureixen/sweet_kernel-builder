@@ -1,11 +1,9 @@
 # ════════════════════════════════════════════════════════════════
 #  sweet_kernel-builder — GitHub Actions Workflow
-#  Builds kernel for Redmi Note 10 Pro (sweet) with:
-#    · KernelSU-Next (legacy-susfs branch)
-#    · SuSFS (kernel-4.14 patch)
-#    · Neutron Clang toolchain
+#  Device : Redmi Note 10 Pro (sweet/sweetin)
+#  Kernel : 4.14 | KernelSU-Next (legacy-susfs) + SuSFS
+#  Clang  : Neutron Clang (latest)
 # ════════════════════════════════════════════════════════════════
-
 name: Build Sweet Kernel
 
 on:
@@ -18,52 +16,76 @@ on:
 
 jobs:
   build:
-    name: Build Kernel
+    name: Build Kernel (sweet | KSU-Next + SuSFS)
     runs-on: ubuntu-latest
 
     steps:
-      # ── 1. Checkout builder repo ─────────────────────────────
+
+      # ── 1. Checkout builder repo ────────────────────────────────
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ── 2. Load config.env into environment ──────────────────
+      # ── 2. Load config.env into environment ─────────────────────
       - name: Load Configuration
         run: |
           echo "→ Loading config.env..."
-          grep -v '^\s*#' config.env | grep -v '^\s*$' >> $GITHUB_ENV
-          echo "KERNEL_DIR=$HOME/kernel-build/kernel" >> $GITHUB_ENV
-          echo "AK3_DIR=$HOME/kernel-build/AnyKernel3" >> $GITHUB_ENV
-          echo "CLANG_BIN=$HOME/toolchains/neutron-clang/bin" >> $GITHUB_ENV
-          echo "BUILD_DATE=$(date +'%Y%m%d-%H%M')" >> $GITHUB_ENV
+          # Strip comments and blank lines, export the rest
+          grep -v '^\s*#' config.env | grep -v '^\s*$' | \
+            sed 's|$HOME|'"$HOME"'|g' >> "$GITHUB_ENV"
 
-      # ── 3. Setup: deps + toolchain + kernel clone ─────────────
+          # Set derived paths
+          echo "KERNEL_DIR=$HOME/kernel-build/kernel"   >> "$GITHUB_ENV"
+          echo "AK3_DIR=$HOME/kernel-build/AnyKernel3"  >> "$GITHUB_ENV"
+          echo "CLANG_BIN=$HOME/toolchains/neutron-clang/bin" >> "$GITHUB_ENV"
+          echo "KERNEL_OUT=$HOME/kernel-build/kernel/out"     >> "$GITHUB_ENV"
+          echo "BUILD_DATE=$(date +'%Y%m%d-%H%M')"      >> "$GITHUB_ENV"
+
+      # ── 3. Setup: deps + toolchain + kernel clone ───────────────
       - name: Setup Environment
         run: bash scripts/01-setup.sh
 
-      # ── 4. Apply patches: KSU-Next + SuSFS + manual hook ─────
+      # ── 4. Apply patches: KSU-Next + SuSFS + device patches ────
       - name: Apply Patches
         run: bash scripts/02-patch.sh
 
-      # ── 5. Compile kernel + package AnyKernel3 zip ───────────
+      # ── 5. Compile kernel + package AnyKernel3 zip ─────────────
       - name: Build Kernel
         run: bash scripts/03-build.sh
 
-      # ── 6. Upload AnyKernel3 zip as artifact ─────────────────
+      # ── 6. Upload AnyKernel3 zip as artifact ───────────────────
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sweet-kernel-${{ env.BUILD_DATE }}
+          name: sweet-kernel-KSU-SuSFS-${{ env.BUILD_DATE }}
           path: ${{ env.AK3_DIR }}/sweet-kernel-*.zip
           if-no-files-found: error
           retention-days: 7
 
-      # ── 7. (Optional) GitHub Release ─────────────────────────
+      # ── 7. (Optional) GitHub Release ───────────────────────────
       - name: Create Release
         if: ${{ github.event.inputs.release == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: kernel-${{ env.BUILD_DATE }}
-          name: Sweet Kernel ${{ env.BUILD_DATE }}
+          name: "Sweet Kernel | KSU-Next + SuSFS | ${{ env.BUILD_DATE }}"
+          body: |
+            ## Sweet Kernel — KernelSU-Next + SuSFS
+
+            **Device:** Redmi Note 10 Pro (sweet/sweetin)
+            **Kernel:** 4.14 | KernelSU-Next (legacy-susfs) + SuSFS
+            **Clang:** Neutron Clang (latest)
+            **Built:** ${{ env.BUILD_DATE }}
+
+            ### Flash Instructions
+            1. Boot into custom recovery (TWRP/OrangeFox)
+            2. Flash this zip
+            3. Reboot
+
+            ### Features
+            - KernelSU-Next with SuSFS (manual hook)
+            - LN8K charging IC support
+            - ThinLTO optimization
+            - EROFS filesystem support
           files: ${{ env.AK3_DIR }}/sweet-kernel-*.zip
           generate_release_notes: false
         env:
