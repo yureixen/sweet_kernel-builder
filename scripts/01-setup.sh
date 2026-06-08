@@ -1,8 +1,9 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════
 #  01-setup.sh — Environment Setup
-#  · System dependencies install
-#  · Neutron Clang download
+#
+#  · System dependencies
+#  · Neutron Clang (latest, via antman)
 #  · Kernel source clone
 #  · AnyKernel3 clone
 # ════════════════════════════════════════════════════════════════
@@ -20,23 +21,24 @@ sudo apt-get update -qq
 sudo apt-get install -y -qq \
     git bc bison flex libssl-dev make libc6-dev libncurses5-dev \
     binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi \
+    gcc-arm-linux-gnueabi \
     python3 zip unzip curl wget libelf-dev cpio \
-    ccache lz4 zstd
+    lz4 zstd pahole
+
+echo "✓ Dependencies installed"
 
 # ─── Toolchain: Neutron Clang ────────────────────────────────────
 echo ""
-echo "→ Downloading Neutron Clang (latest)..."
+echo "→ Setting up Neutron Clang (latest)..."
 mkdir -p "$HOME/toolchains/neutron-clang"
 cd "$HOME/toolchains/neutron-clang"
 
-# antman script diye Neutron Clang install
 curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
 chmod +x antman
 ./antman -S=latest
 
-# Verify clang
 if [ ! -f "$HOME/toolchains/neutron-clang/bin/clang" ]; then
-    echo "✗ Clang download failed!"
+    echo "✗ Clang not found after install!"
     exit 1
 fi
 
@@ -60,12 +62,11 @@ echo "✓ Kernel cloned → $KERNEL_DIR"
 echo ""
 echo "→ Cloning AnyKernel3..."
 
-# "sweet" branch try korbo, na thakle "master"-e fallback
 if git ls-remote --heads "$AK3_REPO" "$AK3_BRANCH" | grep -q "$AK3_BRANCH"; then
     git clone --depth=1 -b "$AK3_BRANCH" "$AK3_REPO" "$AK3_DIR"
     echo "✓ AnyKernel3 cloned (branch: $AK3_BRANCH)"
 else
-    echo "⚠ Branch '$AK3_BRANCH' not found, using 'master'..."
+    echo "⚠ Branch '$AK3_BRANCH' not found, falling back to master..."
     git clone --depth=1 -b master "$AK3_REPO" "$AK3_DIR"
     echo "✓ AnyKernel3 cloned (branch: master)"
 fi
