@@ -29,16 +29,21 @@ jobs:
       - name: Load Configuration
         run: |
           echo "→ Loading config.env..."
-          # Strip comments and blank lines, export the rest
-          grep -v '^\s*#' config.env | grep -v '^\s*$' | \
-            sed 's|$HOME|'"$HOME"'|g' >> "$GITHUB_ENV"
+          # Strip comments and blank lines, expand $HOME, export the rest
+          while IFS= read -r line; do
+            [[ "$line" =~ ^\s*# ]] && continue
+            [[ -z "${line// }" ]] && continue
+            # Expand $HOME in values
+            expanded="${line/\$HOME/$HOME}"
+            echo "$expanded" >> "$GITHUB_ENV"
+          done < config.env
 
-          # Set derived paths
-          echo "KERNEL_DIR=$HOME/kernel-build/kernel"   >> "$GITHUB_ENV"
-          echo "AK3_DIR=$HOME/kernel-build/AnyKernel3"  >> "$GITHUB_ENV"
+          # Set derived paths explicitly
+          echo "KERNEL_DIR=$HOME/kernel-build/kernel"        >> "$GITHUB_ENV"
+          echo "AK3_DIR=$HOME/kernel-build/AnyKernel3"       >> "$GITHUB_ENV"
           echo "CLANG_BIN=$HOME/toolchains/neutron-clang/bin" >> "$GITHUB_ENV"
           echo "KERNEL_OUT=$HOME/kernel-build/kernel/out"     >> "$GITHUB_ENV"
-          echo "BUILD_DATE=$(date +'%Y%m%d-%H%M')"      >> "$GITHUB_ENV"
+          echo "BUILD_DATE=$(date +'%Y%m%d-%H%M')"           >> "$GITHUB_ENV"
 
       # ── 3. Setup: deps + toolchain + kernel clone ───────────────
       - name: Setup Environment
@@ -80,12 +85,6 @@ jobs:
             1. Boot into custom recovery (TWRP/OrangeFox)
             2. Flash this zip
             3. Reboot
-
-            ### Features
-            - KernelSU-Next with SuSFS (manual hook)
-            - LN8K charging IC support
-            - ThinLTO optimization
-            - EROFS filesystem support
           files: ${{ env.AK3_DIR }}/sweet-kernel-*.zip
           generate_release_notes: false
         env:
