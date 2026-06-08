@@ -2,19 +2,14 @@
 # ════════════════════════════════════════════════════════════════
 #  02-patch.sh — Patch Application
 #
-#  Reference: riarumoda/perf_neon-builder (add-goodies.sh +
-#             apply-device-patches.sh) এবং
-#             JackA1ltman/NonGKI_Kernel_Build_2nd
-#
-#  Exact flow for ksunext-susfs (legacy-susfs branch):
-#    1. KernelSU-Next setup (dev branch setup.sh → legacy-susfs checkout)
+#  Flow (ksunext + susfs, legacy-susfs branch):
+#    1. KernelSU-Next setup (dev branch setup.sh → legacy-susfs)
 #    2. KSU base defconfig entries
-#    3. susfs_inline_hook_patches.sh  ← hook mechanism (exec, open,
-#       stat, read_write, input, selinux, sys, reboot সব একসাথে)
+#    3. susfs_inline_hook_patches.sh  ← all hooks in one script
 #    4. susfs_patch_to_4.14.patch     ← SuSFS filesystem patch
 #    5. SuSFS defconfig entries
 #    6. Sweet device patches (LN8K, DTBO, LTO, KPATCH)
-#    7. Sweet defconfig entries
+#    7. Sweet + build-fix defconfig entries
 # ════════════════════════════════════════════════════════════════
 set -e
 
@@ -29,51 +24,53 @@ NONGKI_RAW="https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2n
 DEFCONFIG="arch/arm64/configs/${KERNEL_DEFCONFIG}"
 KERNEL_VERSION="4.14"
 
-# Patch helper
+# ─── Patch helper ────────────────────────────────────────────────
 apply_patch_url() {
     local url="$1"
     local name
     name=$(basename "$url")
-    echo "  Applying: $name"
-    wget -qO- "$url" | patch -s -p1 --fuzz=5 || echo "  (already applied or minor reject)"
+    echo "    Applying: $name"
+    if wget -qO- "$url" | patch -s -p1 --fuzz=5 2>/dev/null; then
+        echo "    ✓ $name"
+    else
+        echo "    ⚠ $name (already applied or minor reject, continuing)"
+    fi
 }
 
 # ─── Step 1: KernelSU-Next Setup ─────────────────────────────────
-# setup.sh টা dev branch থেকে নেওয়া হয়, কিন্তু legacy-susfs checkout করে।
-# এটা add-goodies.sh-এর exact approach।
 echo ""
-echo "→ [1/7] Setting up KernelSU-Next (legacy-susfs)..."
+echo "→ [1/7] Setting up KernelSU-Next (branch: $KERNELSU_BRANCH)..."
 
 curl -LSs --fail --retry 3 \
     "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" \
     | bash -s "${KERNELSU_BRANCH}"
 
-echo "✓ KernelSU-Next added (branch: $KERNELSU_BRANCH)"
+echo "✓ KernelSU-Next added"
 
-# ─── Step 2: KSU Base Defconfig Entries ──────────────────────────
+# ─── Step 2: KSU Base Defconfig ──────────────────────────────────
 echo ""
-echo "→ [2/7] Adding KSU base defconfig entries..."
+echo "→ [2/7] Adding KSU defconfig entries..."
 
-{
-    echo "CONFIG_KSU=y"
-    echo "CONFIG_KSU_MANUAL_HOOK=y"
-    echo "CONFIG_HAVE_SYSCALL_TRACEPOINTS=y"
-    echo "CONFIG_THREAD_INFO_IN_TASK=y"
-} >> "$DEFCONFIG"
+cat >> "$DEFCONFIG" << 'EOF'
+# KernelSU-Next
+CONFIG_KSU=y
+CONFIG_KSU_MANUAL_HOOK=y
+CONFIG_HAVE_SYSCALL_TRACEPOINTS=y
+CONFIG_THREAD_INFO_IN_TASK=y
+EOF
 
-echo "✓ KSU base configs added"
+echo "✓ KSU defconfig added"
 
 # ─── Step 3: SuSFS Inline Hook Patches ───────────────────────────
-# এটাই পুরো hook mechanism।
-# exec.c, open.c, read_write.c, stat.c, namei.c, input.c,
-# security.c, selinux/hooks.c, selinux/ss/services.c,
-# reboot.c, sys.c, seccomp.h — সব এই একটা script handle করে।
+# Handles: exec.c, open.c, read_write.c, stat.c, namei.c, input.c,
+# security.c, selinux/hooks.c, selinux/ss/services.c, reboot.c,
+# sys.c, seccomp.h — all in one script
 echo ""
 echo "→ [3/7] Applying SuSFS inline hook patches..."
 
 curl -fLSs "${NONGKI_RAW}/Patches/susfs_inline_hook_patches.sh" \
     -o /tmp/susfs_inline_hook_patches.sh || {
-    echo "✗ susfs_inline_hook_patches.sh download failed!"
+    echo "✗ Failed to download susfs_inline_hook_patches.sh"
     exit 1
 }
 bash /tmp/susfs_inline_hook_patches.sh
@@ -81,42 +78,41 @@ bash /tmp/susfs_inline_hook_patches.sh
 echo "✓ SuSFS inline hook patches applied"
 
 # ─── Step 4: SuSFS Kernel Patch (4.14) ───────────────────────────
-# Inline hook-এর পরে apply করতে হয় — add-goodies.sh-এর order।
 echo ""
-echo "→ [4/7] Applying SuSFS kernel patch (4.14)..."
+echo "→ [4/7] Applying SuSFS filesystem patch (kernel $KERNEL_VERSION)..."
 
-SUSFS_PATCH_URL="${NONGKI_RAW}/Patches/Patch/susfs_patch_to_${KERNEL_VERSION}.patch"
-wget -qO- "$SUSFS_PATCH_URL" | patch -s -p1 --fuzz=5 || \
-    echo "  (patch applied with minor rejects or already done)"
+wget -qO- "${NONGKI_RAW}/Patches/Patch/susfs_patch_to_${KERNEL_VERSION}.patch" \
+    | patch -s -p1 --fuzz=5 || \
+    echo "  ⚠ Patch applied with minor rejects or already done"
 
 echo "✓ SuSFS filesystem patch applied"
 
-# ─── Step 5: SuSFS Defconfig Entries ─────────────────────────────
+# ─── Step 5: SuSFS Defconfig ─────────────────────────────────────
 echo ""
 echo "→ [5/7] Adding SuSFS defconfig entries..."
 
-{
-    echo "CONFIG_KSU_SUSFS=y"
-    echo "CONFIG_KSU_SUSFS_SUS_PATH=y"
-    echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y"
-    echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y"
-    echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y"
-    echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y"
-    echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y"
-    echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y"
-    echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y"
-    echo "CONFIG_KSU_SUSFS_SUS_MAP=y"
-    echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y"
-    # SUS_SU explicitly disabled (manual hook use করলে লাগে না)
-    echo "# CONFIG_KSU_SUSFS_SUS_SU is not set"
-} >> "$DEFCONFIG"
+cat >> "$DEFCONFIG" << 'EOF'
+# SuSFS
+CONFIG_KSU_SUSFS=y
+CONFIG_KSU_SUSFS_SUS_PATH=y
+CONFIG_KSU_SUSFS_SUS_MOUNT=y
+CONFIG_KSU_SUSFS_SUS_KSTAT=y
+CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+CONFIG_KSU_SUSFS_ENABLE_LOG=y
+CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+CONFIG_KSU_SUSFS_SUS_MAP=y
+CONFIG_KSU_SUSFS_TRY_UMOUNT=y
+# SUS_SU disabled — using manual hook instead
+# CONFIG_KSU_SUSFS_SUS_SU is not set
+EOF
 
-echo "✓ SuSFS configs added"
+echo "✓ SuSFS defconfig added"
 
 # ─── Step 6: Sweet Device Patches ────────────────────────────────
-# apply-device-patches.sh থেকে sweet-এর exact patches।
 echo ""
-echo "→ [6/7] Applying sweet device patches..."
+echo "→ [6/7] Applying Sweet device patches..."
 
 XIAOMI_SM6150="https://github.com/crdroidandroid/android_kernel_xiaomi_sm6150/commit"
 TBYOOL="https://github.com/tbyool/android_kernel_xiaomi_sm6150/commit"
@@ -152,20 +148,30 @@ echo "  ✓ LTO + KPATCH patches done"
 
 echo "✓ Sweet device patches applied"
 
-# ─── Step 7: Sweet Defconfig Entries ─────────────────────────────
+# ─── Step 7: Sweet + Build-Fix Defconfig ─────────────────────────
 echo ""
-echo "→ [7/7] Adding sweet device defconfig entries..."
+echo "→ [7/7] Adding Sweet device + build fix defconfig entries..."
 
-{
-    echo "CONFIG_CHARGER_LN8000=y"
-    echo "CONFIG_LTO_CLANG=y"
-    echo "CONFIG_THINLTO=y"
-    echo "# CONFIG_LTO_NONE is not set"
-    echo "CONFIG_EROFS_FS=y"
-    echo "CONFIG_SECURITY_SELINUX_DEVELOP=y"
-} >> "$DEFCONFIG"
+cat >> "$DEFCONFIG" << 'EOF'
+# Sweet device configs
+CONFIG_CHARGER_LN8000=y
 
-echo "✓ Sweet device configs added"
+# LTO (Clang Link Time Optimization)
+CONFIG_LTO_CLANG=y
+CONFIG_THINLTO=y
+# CONFIG_LTO_NONE is not set
+
+# vDSO32 disabled:
+# lld cannot link 32-bit ARM vDSO — disable to fix build.
+# Sweet stock kernel has this disabled too, zero impact on boot.
+# CONFIG_VDSO32 is not set
+
+# Extras
+CONFIG_EROFS_FS=y
+CONFIG_SECURITY_SELINUX_DEVELOP=y
+EOF
+
+echo "✓ Sweet + build-fix defconfig added"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
