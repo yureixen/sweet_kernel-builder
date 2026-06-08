@@ -29,6 +29,7 @@ MAKE_ARGS=(
     ARCH=arm64
     SUBARCH=arm64
     CC=clang
+    LD=ld.lld
     CLANG_TRIPLE=aarch64-linux-gnu-
     CROSS_COMPILE=aarch64-linux-gnu-
     CROSS_COMPILE_ARM32=arm-linux-gnueabi-
@@ -39,6 +40,7 @@ MAKE_ARGS=(
     STRIP=llvm-strip
     HOSTCC=clang
     HOSTCXX=clang++
+    HOSTLD=ld.lld
 )
 
 # ─── Step 1: Make defconfig ──────────────────────────────────────
