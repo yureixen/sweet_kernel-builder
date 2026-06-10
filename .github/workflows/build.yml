@@ -1,0 +1,130 @@
+# ════════════════════════════════════════════════════════════════
+#  sweet_kernel-builder — GitHub Actions Workflow
+#  Device  : Redmi Note 10 Pro (sweet/sweetin)
+#  Kernel  : 4.14 | arm64
+#  Clang   : LineageOS Clang r416183b (stable)
+#  Trigger : Manual (workflow_dispatch)
+#  Release : Auto on success
+# ════════════════════════════════════════════════════════════════
+name: Build Sweet Kernel
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.variant }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [stock, ksu]
+
+    outputs:
+      timestamp: ${{ steps.ts.outputs.TIME }}
+      date:      ${{ steps.ts.outputs.DATE }}
+
+    steps:
+      # ── 1. Checkout builder repo ──────────────────────────────
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ── 2. Timestamp ──────────────────────────────────────────
+      - name: Timestamp
+        id: ts
+        run: |
+          echo "DATE=$(date +'%Y%m%d')"   >> "$GITHUB_OUTPUT"
+          echo "TIME=$(date +'%s')"        >> "$GITHUB_OUTPUT"
+
+      # ── 3. Install dependencies ───────────────────────────────
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            bc build-essential bison flex zip \
+            libc6 curl libstdc++6 git wget libssl-dev \
+            zstd lld python3 patchutils ccache \
+            libelf-dev cpio lz4 pahole
+
+      # ── 4. Setup: toolchain + kernel + AnyKernel3 ─────────────
+      - name: Setup Environment
+        run: bash scripts/setup.sh
+
+      # ── 5. Apply patches (variant-aware) ──────────────────────
+      - name: Apply Patches
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: bash scripts/patches.sh
+
+      # ── 6. Compile ────────────────────────────────────────────
+      - name: Compile Kernel
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: bash scripts/compile.sh
+
+      # ── 7. Upload artifact ────────────────────────────────────
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweet-kernel-${{ matrix.variant }}-${{ steps.ts.outputs.DATE }}-${{ steps.ts.outputs.TIME }}
+          path: ${{ github.workspace }}/AnyKernel3/sweet-kernel-*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  # ── Release job (runs after both builds succeed) ──────────────
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: List artifacts
+        run: ls -lah artifacts/
+
+      - name: Fancy date
+        id: ts
+        run: |
+          echo "FANCYDATE=$(date +'%Y/%m/%d')" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: kernel-sweet-${{ needs.build.outputs.timestamp }}
+          name: "Sweet Kernel — ${{ steps.ts.outputs.FANCYDATE }}"
+          draft: false
+          prerelease: false
+          body: |
+            ## Sweet Kernel for Redmi Note 10 Pro (sweet/sweetin)
+
+            **Kernel:** 4.14 | arm64
+            **Source:** [yurixen/android_kernel_xiaomi_sm6150 @ sixteen-qpr2](https://github.com/yurixen/android_kernel_xiaomi_sm6150/tree/sixteen-qpr2)
+            **Compiler:** LineageOS Clang r416183b
+
+            ### Variants
+            | Zip | Description |
+            |-----|-------------|
+            | `sweet-kernel-stock-*.zip` | Stock — no modifications |
+            | `sweet-kernel-ksu-*.zip` | KernelSU-Next + SuSFS (legacy-susfs) |
+
+            ### Flash Instructions
+            1. Boot into custom recovery (TWRP / OrangeFox)
+            2. Flash the zip for your variant
+            3. Reboot
+
+            > [!CAUTION]
+            > Always backup your boot image before flashing!
+          files: artifacts/**/*.zip
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
