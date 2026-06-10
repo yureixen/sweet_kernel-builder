@@ -1,34 +1,35 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════
-#  goodies/kernelsu.sh — KernelSU-Next + SuSFS integration
+#  goodies/kernelsu.sh — ReSukiSU + SuSFS integration
 #
-#  KernelSU-Next setup: official setup.sh, argument "legacy"
-#  SuSFS: JackA1ltman/NonGKI_Kernel_Build_2nd (4.14 tested)
+#  KSU impl : ReSukiSU (fork of KernelSU-Next, 4.x supported)
+#  Hooks    : susfs_inline_hook_patches.sh (JackA1ltman)
+#  SuSFS    : NonGKI_Kernel_Build_2nd, kernel 4.14 patch
 #
-#  NOTE: setup.sh accepts keywords: dev / stable / legacy
-#        NOT branch names like "legacy-susfs".
-#        We use "legacy" + manual SuSFS patch on top.
+#  Note: KernelSU-Next dropped 4.x support (PR #1072).
+#        ReSukiSU maintains it and is used by perf_neon-builder.
 # ════════════════════════════════════════════════════════════════
 # Called from patches.sh — cwd is $KERNEL_DIR
 
 DEFCONFIG="arch/arm64/configs/${KERNEL_DEFCONFIG}"
 NONGKI_RAW="https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/mainline"
-KSU_SETUP_URL="https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh"
+KSU_SETUP_URL="https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/main/kernel/setup.sh"
+KSU_HOOK_URL="${NONGKI_RAW}/Patches/susfs_inline_hook_patches.sh"
 
 echo ""
-echo "→ [KSU] Setting up KernelSU-Next (legacy) + SuSFS..."
+echo "→ [KSU] Setting up ReSukiSU + SuSFS..."
 
-# ── Step 1: KernelSU-Next setup ───────────────────────────────
-# "legacy" = stable legacy branch of KernelSU-Next
-curl -LSs --fail --retry 3 "$KSU_SETUP_URL" | bash -s legacy || {
-    echo "✗ KernelSU-Next setup failed!"
+# ── Step 1: ReSukiSU setup ────────────────────────────────────
+echo "  → Running ReSukiSU setup script..."
+curl -LSs --fail --retry 3 "$KSU_SETUP_URL" | bash -s main || {
+    echo "✗ ReSukiSU setup failed!"
     exit 1
 }
-echo "  ✓ KernelSU-Next (legacy) added"
+echo "  ✓ ReSukiSU added"
 
 # ── Step 2: KSU defconfig ─────────────────────────────────────
 cat >> "$DEFCONFIG" << 'EOF'
-# KernelSU-Next
+# ReSukiSU
 CONFIG_KSU=y
 CONFIG_KSU_MANUAL_HOOK=y
 CONFIG_HAVE_SYSCALL_TRACEPOINTS=y
@@ -38,9 +39,7 @@ echo "  ✓ KSU defconfig added"
 
 # ── Step 3: SuSFS inline hook patches ────────────────────────
 echo "  → Applying SuSFS inline hook patches..."
-curl -fLSs --fail --retry 3 \
-    "${NONGKI_RAW}/Patches/susfs_inline_hook_patches.sh" \
-    -o /tmp/susfs_inline_hook.sh || {
+curl -fLSs --fail --retry 3 "$KSU_HOOK_URL" -o /tmp/susfs_inline_hook.sh || {
     echo "✗ Failed to download susfs_inline_hook_patches.sh"
     exit 1
 }
@@ -70,9 +69,9 @@ CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
 CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
 CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
 CONFIG_KSU_SUSFS_SUS_MAP=y
-CONFIG_KSU_SUSFS_TRY_UMOUNT=y
+# CONFIG_KSU_SUSFS_TRY_UMOUNT is not set — path_umount unavailable in 4.14
 # CONFIG_KSU_SUSFS_SUS_SU is not set
 EOF
 echo "  ✓ SuSFS defconfig added"
 
-echo "→ [KSU] KernelSU-Next + SuSFS complete ✓"
+echo "→ [KSU] ReSukiSU + SuSFS complete ✓"
