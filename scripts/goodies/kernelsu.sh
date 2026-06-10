@@ -1,25 +1,30 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════
 #  goodies/kernelsu.sh — KernelSU-Next + SuSFS integration
-#  Branch: legacy-susfs (KernelSU-Next by rifsxd)
-#  SuSFS patch: JackA1ltman/NonGKI_Kernel_Build_2nd
+#
+#  KernelSU-Next setup: official setup.sh, argument "legacy"
+#  SuSFS: JackA1ltman/NonGKI_Kernel_Build_2nd (4.14 tested)
+#
+#  NOTE: setup.sh accepts keywords: dev / stable / legacy
+#        NOT branch names like "legacy-susfs".
+#        We use "legacy" + manual SuSFS patch on top.
 # ════════════════════════════════════════════════════════════════
-# Called from patches.sh — $KERNEL_DIR and $DEFCONFIG already set
+# Called from patches.sh — cwd is $KERNEL_DIR
 
 DEFCONFIG="arch/arm64/configs/${KERNEL_DEFCONFIG}"
 NONGKI_RAW="https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/mainline"
+KSU_SETUP_URL="https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh"
 
 echo ""
-echo "→ [KSU] Setting up KernelSU-Next (branch: $KERNELSU_BRANCH)..."
+echo "→ [KSU] Setting up KernelSU-Next (legacy) + SuSFS..."
 
 # ── Step 1: KernelSU-Next setup ───────────────────────────────
-curl -LSs --fail --retry 3 \
-    "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" \
-    | bash -s "$KERNELSU_BRANCH" || {
+# "legacy" = stable legacy branch of KernelSU-Next
+curl -LSs --fail --retry 3 "$KSU_SETUP_URL" | bash -s legacy || {
     echo "✗ KernelSU-Next setup failed!"
     exit 1
 }
-echo "  ✓ KernelSU-Next added"
+echo "  ✓ KernelSU-Next (legacy) added"
 
 # ── Step 2: KSU defconfig ─────────────────────────────────────
 cat >> "$DEFCONFIG" << 'EOF'
@@ -33,7 +38,8 @@ echo "  ✓ KSU defconfig added"
 
 # ── Step 3: SuSFS inline hook patches ────────────────────────
 echo "  → Applying SuSFS inline hook patches..."
-curl -fLSs --retry 3 "${NONGKI_RAW}/Patches/susfs_inline_hook_patches.sh" \
+curl -fLSs --fail --retry 3 \
+    "${NONGKI_RAW}/Patches/susfs_inline_hook_patches.sh" \
     -o /tmp/susfs_inline_hook.sh || {
     echo "✗ Failed to download susfs_inline_hook_patches.sh"
     exit 1
@@ -69,4 +75,4 @@ CONFIG_KSU_SUSFS_TRY_UMOUNT=y
 EOF
 echo "  ✓ SuSFS defconfig added"
 
-echo "→ [KSU] KernelSU-Next + SuSFS setup complete ✓"
+echo "→ [KSU] KernelSU-Next + SuSFS complete ✓"
