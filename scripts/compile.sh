@@ -21,8 +21,6 @@ export KBUILD_BUILD_HOST="$KBUILD_BUILD_HOST"
 JOBS=$(nproc --all)
 
 # ── Make arguments ────────────────────────────────────────────
-# Full LLVM toolchain — avoids mixed GNU/LLVM linker issues
-# CROSS_COMPILE uses android- prefix (matches LineageOS GCC)
 MAKE_ARGS=(
     ARCH=arm64
     SUBARCH=arm64
@@ -102,19 +100,46 @@ rm -f Image.gz-dtb Image.gz dtb dtbo.img *.zip
 cp "$IMAGE" "$AK3_DIR/Image.gz-dtb"
 [ -f "$DTBO" ] && cp "$DTBO" "$AK3_DIR/dtbo.img"
 
-# Patch anykernel.sh for sweet
-sed -i 's/device.name1=.*/device.name1=sweet/'     anykernel.sh
-sed -i 's/device.name2=.*/device.name2=sweetin/'   anykernel.sh
-sed -i 's/supported.versions=.*/supported.versions=12-16/' anykernel.sh
+# Write a clean anykernel.sh for sweet
+# osm0sis/AnyKernel3 master is a generic template — we replace it
+# entirely to avoid misconfigured defaults causing flash errors.
+cat > "$AK3_DIR/anykernel.sh" << 'AKEOF'
+# AnyKernel3 — Sweet Kernel
+# by osm0sis @ xda-developers
 
-# Build zip — name includes variant
+properties() { '
+kernel.string=Sweet Kernel by yurixen
+do.devicecheck=1
+do.modules=0
+do.systemless=1
+do.cleanup=1
+do.cleanuponabort=0
+device.name1=sweet
+device.name2=sweetin
+supported.versions=12-16
+supported.patchlevels=
+'; }
+
+block=/dev/block/bootdevice/by-name/boot;
+is_slot_device=0;
+ramdisk_compression=auto;
+patch_vbmeta_flag=auto;
+
+. tools/ak3-core.sh;
+
+# Flash Image.gz-dtb
+split_boot;
+flash_boot;
+AKEOF
+
+echo "✓ anykernel.sh written for sweet"
+
+# Build zip
 BUILD_DATE=$(date +'%Y%m%d-%H%M')
 ZIP_NAME="sweet-kernel-${VARIANT}-${BUILD_DATE}.zip"
 zip -rq9 "$ZIP_NAME" . \
-    -x ".git/*"    \
-    -x "*.zip"     \
-    -x "README.md" \
-    -x "*.sh"
+    -x ".git/*" \
+    -x "*.zip"
 
 echo "✓ Zip created: $ZIP_NAME ($(du -h "$ZIP_NAME" | cut -f1))"
 
