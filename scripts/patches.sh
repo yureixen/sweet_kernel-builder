@@ -1,15 +1,14 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════
-#  patches.sh — Device patches + KernelSU/SuSFS (if ksu variant)
+#  patches.sh — Device patches + ReSukiSU/SuSFS (if ksu variant)
 #
 #  VARIANT=stock → only device patches
-#  VARIANT=ksu   → device patches + KernelSU-Next + SuSFS
+#  VARIANT=ksu   → device patches + SELinux export + ReSukiSU + SuSFS
 # ════════════════════════════════════════════════════════════════
 set -e
 
 cd "$KERNEL_DIR"
 DEFCONFIG="arch/arm64/configs/${KERNEL_DEFCONFIG}"
-NONGKI_RAW="https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/mainline"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -103,8 +102,33 @@ CONFIG_SECURITY_SELINUX_DEVELOP=y
 EOF
 echo "✓ Common defconfig done"
 
-# ── 6. KernelSU-Next + SuSFS (ksu variant only) ──────────────
+# ── 6. SELinux static export + ReSukiSU + SuSFS (ksu only) ───
 if [[ "$VARIANT" == "ksu" ]]; then
+
+    # ReSukiSU requires write_op to be exported (not static).
+    # Without this OR CONFIG_KALLSYMS_ALL=y, ReSukiSU stops the build.
+    # This is exactly what perf_neon does in its kernelsu.sh.
+    echo ""
+    echo "→ [6] Exporting SELinux static symbols for ReSukiSU..."
+    unstatic() {
+        local file="$1"
+        local regex="$2"
+        if [ -f "$file" ] && grep -q "static $regex" "$file" 2>/dev/null; then
+            sed -i "s/static $regex/$regex/" "$file"
+            echo "  ✓ Exported: $regex"
+        else
+            echo "  ⚠ Not found or already exported: $regex"
+        fi
+    }
+    unstatic "security/selinux/selinuxfs.c"   "ssize_t (\*write_op\[\])"
+    unstatic "security/selinux/selinuxfs.c"   "const struct file_operations sel_handle_status_ops"
+    unstatic "security/selinux/selinuxfs.c"   "DEFINE_MUTEX(sel_mutex);"
+    unstatic "security/selinux/ss/services.c" "struct page \*selinux_status_page;"
+    unstatic "security/selinux/ss/services.c" "DEFINE_MUTEX(selinux_status_lock);"
+    unstatic "security/selinux/ss/services.c" "DEFINE_RWLOCK(policy_rwlock);"
+    unstatic "security/selinux/hooks.c"       "struct security_operations selinux_ops"
+    echo "✓ SELinux static exports done"
+
     source "$GITHUB_WORKSPACE/scripts/goodies/kernelsu.sh"
 fi
 
