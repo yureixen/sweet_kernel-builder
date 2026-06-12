@@ -1,8 +1,8 @@
 # ════════════════════════════════════════════════════════════════
 #  sweet_kernel-builder — GitHub Actions Workflow
 #  Device  : Redmi Note 10 Pro (sweet/sweetin)
-#  Kernel  : 4.14 | arm64
-#  Clang   : LineageOS Clang r416183b (stable)
+#  Kernel  : 4.14
+#  Clang   : LineageOS Clang r416183b
 #  Trigger : Manual (workflow_dispatch)
 #  Release : Auto on success
 # ════════════════════════════════════════════════════════════════
