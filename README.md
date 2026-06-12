@@ -25,7 +25,6 @@ Automated kernel build pipeline.
 **Projects**
 - [PixelOS-Devices](https://github.com/PixelOS-Devices/android_kernel_xiaomi_sm6150) — for kernel source
 - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) — KernelSU implementation with 4.x support
-- [simonpunk](https://github.com/simonpunk/susfs4ksu) — SuSFS
 
 **Inspiration**
 - [riarumoda/perf_neon-builder](https://github.com/riarumoda/perf_neon-builder) — build pipeline structure
