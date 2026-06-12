@@ -9,7 +9,7 @@ Automated kernel build pipeline.
 | `stock` | Stock — device patches only |
 | `ksu` | ReSukiSU + SuSFS + device patches |
 
-# Compatibility
+## Compatibility
 **Currently supported device**
 - Redmi Note 10 Pro/Pro Max ([sweet](https://download.lineageos.org/devices/sweet/builds))
 
