@@ -105,9 +105,6 @@ echo "✓ Common defconfig done"
 # ── 6. SELinux static export + ReSukiSU + SuSFS (ksu only) ───
 if [[ "$VARIANT" == "ksu" ]]; then
 
-    # ReSukiSU requires write_op to be exported (not static).
-    # Without this OR CONFIG_KALLSYMS_ALL=y, ReSukiSU stops the build.
-    # This is exactly what perf_neon does in its kernelsu.sh.
     echo ""
     echo "→ [6] Exporting SELinux static symbols for ReSukiSU..."
     unstatic() {
