@@ -2,7 +2,6 @@
 # ════════════════════════════════════════════════════════════════
 #  setup.sh — Toolchain + Kernel Source + AnyKernel3 Setup
 #  Compiler: LineageOS Clang r416183b
-#            Stable, proven on sm6150/4.14 kernels
 # ════════════════════════════════════════════════════════════════
 set -e
 
