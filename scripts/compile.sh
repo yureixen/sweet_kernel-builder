@@ -101,8 +101,6 @@ cp "$IMAGE" "$AK3_DIR/Image.gz-dtb"
 [ -f "$DTBO" ] && cp "$DTBO" "$AK3_DIR/dtbo.img"
 
 # Write a clean anykernel.sh for sweet
-# osm0sis/AnyKernel3 master is a generic template — we replace it
-# entirely to avoid misconfigured defaults causing flash errors.
 cat > "$AK3_DIR/anykernel.sh" << 'AKEOF'
 # AnyKernel3 — Sweet Kernel
 # by osm0sis @ xda-developers
