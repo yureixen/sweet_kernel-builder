@@ -5,9 +5,6 @@
 #  KSU impl : ReSukiSU (fork of KernelSU-Next, 4.x supported)
 #  Hooks    : susfs_inline_hook_patches.sh (JackA1ltman)
 #  SuSFS    : NonGKI_Kernel_Build_2nd, kernel 4.14 patch
-#
-#  Note: KernelSU-Next dropped 4.x support (PR #1072).
-#        ReSukiSU maintains it and is used by perf_neon-builder.
 # ════════════════════════════════════════════════════════════════
 # Called from patches.sh — cwd is $KERNEL_DIR
 
