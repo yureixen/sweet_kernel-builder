@@ -107,7 +107,7 @@ jobs:
           body: |
             ## Sweet Kernel for Redmi Note 10 Pro (sweet/sweetin)
 
-            **Kernel:** 4.14 | arm64
+            **Kernel:** 4.14
             **Source:** [yurixen/android_kernel_xiaomi_sm6150 @ sixteen-qpr2](https://github.com/yurixen/android_kernel_xiaomi_sm6150/tree/sixteen-qpr2)
             **Compiler:** LineageOS Clang r416183b
 
@@ -115,11 +115,11 @@ jobs:
             | Zip | Description |
             |-----|-------------|
             | `sweet-kernel-stock-*.zip` | Stock — no modifications |
-            | `sweet-kernel-ksu-*.zip` | KernelSU-Next + SuSFS (legacy-susfs) |
+            | `sweet-kernel-ksu-*.zip` | ReSukiSU + SuSFS |
 
             ### Flash Instructions
             1. Boot into custom recovery (TWRP / OrangeFox)
-            2. Flash the zip for your variant
+            2. Flash the zip
             3. Reboot
 
             > [!CAUTION]
