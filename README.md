@@ -28,4 +28,4 @@ Automated kernel build pipeline.
 
 ---
 
-_Inspired by [riarumoda/perf_neon-builder](https://github.com/riarumoda/perf_neon-builder)_
+> Inspired by [riarumoda/perf_neon-builder](https://github.com/riarumoda/perf_neon-builder)
