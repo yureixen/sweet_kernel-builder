@@ -4,12 +4,21 @@
 #  Kernel  : 4.14
 #  Clang   : LineageOS Clang r416183b
 #  Trigger : Manual (workflow_dispatch)
-#  Release : Auto on success
+#  Release : Optional — set release input to 'true'
 # ════════════════════════════════════════════════════════════════
 name: Build Sweet Kernel
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'GitHub Release e upload korbe?'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 permissions:
   contents: write
@@ -80,6 +89,7 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.release == 'true' }}
     permissions:
       contents: write
 
