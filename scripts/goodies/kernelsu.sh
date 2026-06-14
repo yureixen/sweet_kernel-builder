@@ -1,4 +1,11 @@
 #!/bin/bash
+# ════════════════════════════════════════════════════════════════
+#  goodies/kernelsu.sh — ReSukiSU + SuSFS integration
+#
+#  KSU impl : ReSukiSU (fork of KernelSU-Next)
+#  Hooks    : susfs_inline_hook_patches.sh (JackA1ltman)
+#  SuSFS    : NonGKI_Kernel_Build_2nd, kernel 4.14 patch
+# ════════════════════════════════════════════════════════════════
 
 DEFCONFIG="arch/arm64/configs/${KERNEL_DEFCONFIG}"
 NONGKI_RAW="https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/mainline"
