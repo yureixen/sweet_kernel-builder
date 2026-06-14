@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: 'GitHub Release e upload korbe?'
+        description: 'Upload to GitHub Release?'
         required: false
         default: 'false'
         type: choice
