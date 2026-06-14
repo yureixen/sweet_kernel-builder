@@ -1,12 +1,4 @@
 #!/bin/bash
-# ════════════════════════════════════════════════════════════════
-#  goodies/kernelsu.sh — ReSukiSU + SuSFS integration
-#
-#  KSU impl : ReSukiSU (fork of KernelSU-Next, 4.x supported)
-#  Hooks    : susfs_inline_hook_patches.sh (JackA1ltman)
-#  SuSFS    : NonGKI_Kernel_Build_2nd, kernel 4.14 patch
-# ════════════════════════════════════════════════════════════════
-# Called from patches.sh — cwd is $KERNEL_DIR
 
 DEFCONFIG="arch/arm64/configs/${KERNEL_DEFCONFIG}"
 NONGKI_RAW="https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/mainline"
@@ -28,6 +20,8 @@ echo "  ✓ ReSukiSU added"
 cat >> "$DEFCONFIG" << 'EOF'
 # ReSukiSU
 CONFIG_KSU=y
+CONFIG_KSU_MULTI_MANAGER_SUPPORT=y
+CONFIG_KPM=n
 CONFIG_KSU_MANUAL_HOOK=y
 CONFIG_HAVE_SYSCALL_TRACEPOINTS=y
 CONFIG_THREAD_INFO_IN_TASK=y
@@ -66,7 +60,7 @@ CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
 CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
 CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
 CONFIG_KSU_SUSFS_SUS_MAP=y
-# CONFIG_KSU_SUSFS_TRY_UMOUNT is not set — path_umount unavailable in 4.14
+CONFIG_KSU_SUSFS_TRY_UMOUNT=y
 # CONFIG_KSU_SUSFS_SUS_SU is not set
 EOF
 echo "  ✓ SuSFS defconfig added"
